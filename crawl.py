@@ -5,6 +5,8 @@ import time
 import requests
 from itertools import combinations
 
+from logger import Logger
+
 # combinations resource:
 # https://stackoverflow.com/questions/32789338/how-to-get-all-combinations-of-several-letters-in-python
 
@@ -16,6 +18,7 @@ from itertools import combinations
 
 CONFIG = "config.ini"
 DATA_PATH = "data"
+LOG_PATH = "crawl.log"
 
 BASE_URL = "https://api.ote-godaddy.com"
 VERSION = "v1"
@@ -26,6 +29,8 @@ EXTENSIONS = ["com", "net", "org", "edu", "biz", "gov", "mil", "info", "name", "
 MIN_DOMAIN_SIZE = 3
 MAX_DOMAIN_SIZE = 63
 WAIT_TIME = 1
+
+sys.stdout = Logger(LOG_PATH)
 
 
 # retrieve key and secret
