@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import pickle
 
 import requests
 from itertools import combinations
@@ -19,12 +20,14 @@ from logger import Logger
 CONFIG = "config.ini"
 DATA_PATH = "data"
 LOG_PATH = "crawl.log"
+CHECKED = "checked.pkl"
 
 BASE_URL = "https://api.ote-godaddy.com"
 VERSION = "v1"
 
-CHARS = "abcdefghijklmnopqrstuvwxyz0123456789_"
-EXTENSIONS = ["com", "net", "org", "edu", "biz", "gov", "mil", "info", "name", "me", "tv", "us", "mobi"]
+CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+# EXTENSIONS = ["com", "net", "org", "edu", "biz", "gov", "mil", "info", "name", "me", "tv", "us", "mobi"]
+EXTENSIONS = ["com", "net"]
 
 MIN_DOMAIN_SIZE = 3
 MAX_DOMAIN_SIZE = 63
@@ -50,15 +53,31 @@ for ext in EXTENSIONS:
 
 
 
+# open checked set
+try:
+    with open("{DATA_PATH}/{CHECKED}", "rb") as checkedFile:
+        checked = pickle.load(checkedFile)
+except:
+    checked = set()
+print(f"Loaded {len(checked)} visited domains")
+
+
+
 # try all combinations and append to domains
 count = 0
 for i in range(MIN_DOMAIN_SIZE, MAX_DOMAIN_SIZE):
+
     print(f"Start creating domains for: {i} characters")
-    domains = list(combinations(CHARS, i))
-    domains = ["".join(domain) for domain in domains]
-    print(f"Finish creating domains for: {i} characters")
+    domains = list(combinations(CHARS*i, i))
+    domains = list(set(["".join(domain) for domain in domains]))
+    print(f"Finish creating {len(domains)} domains for: {i} characters")
+    domains = [domain for domain in domains if domain not in checked]
+    print(f"Remove visited with {len(domains)} domains remaining for: {i} characters")
+
     for domain in domains:
-        if domain.startswith("_") or domain.endswith("_") or domain.find("__") != -1:
+
+        # skip if non-qualifying domain
+        if domain.startswith("-") or domain.endswith("-") or domain.find("--") != -1 or domain in checked:
             continue
         for ext in EXTENSIONS:  
             count += 1
@@ -82,7 +101,7 @@ for i in range(MIN_DOMAIN_SIZE, MAX_DOMAIN_SIZE):
                     successful=False
                 elif page.status_code == 200 and page.json()["available"] == True:
                     with open(f"{DATA_PATH}/{ext}/size{str(i)}.txt", "a") as outFile:
-                        outFile.write(f"{domain}.{ext}")
+                        outFile.write(f'{domain}.{ext} ${page.json()["price"]}\n')
                     print(f"{count}. available on: {domain}.{ext}")
                     successful=True
                 elif page.status_code == 200:
@@ -91,4 +110,10 @@ for i in range(MIN_DOMAIN_SIZE, MAX_DOMAIN_SIZE):
                 else:
                     print(f"{count}. unknown code {page.status_code}: {domain}.{ext}")
                     successful=True
+                checked.add(domain)
+                with open(f"{DATA_PATH}/{CHECKED}") as checkedFile:
+                    pickle.dump(checkedFile, "wb")
                 time.sleep(WAIT_TIME)
+
+
+
