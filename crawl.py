@@ -19,15 +19,16 @@ from logger import Logger
 
 CONFIG = "config.ini"
 DATA_PATH = "data"
-LOG_PATH = "crawl.log"
+LOG_PATH = "logs/crawl"
 CHECKED = "checked.pkl"
 
 BASE_URL = "https://api.ote-godaddy.com"
 VERSION = "v1"
 
-CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+
 # EXTENSIONS = ["com", "net", "org", "edu", "biz", "gov", "mil", "info", "name", "me", "tv", "us", "mobi"]
 EXTENSIONS = ["com", "net"]
+CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
 
 MIN_DOMAIN_SIZE = 3
 MAX_DOMAIN_SIZE = 63
@@ -37,10 +38,21 @@ sys.stdout = Logger(LOG_PATH)
 
 
 # retrieve key and secret
-with open(f"{CONFIG}", "r") as configFile:
-    api_key = configFile.readline().split()[1]
-    api_secret = configFile.readline().split()[1]
-    headers = {"Authorization": f"sso-key {api_key}:{api_secret}"}
+if os.path.isfile(f"{CONFIG}"): 
+    with open(f"{CONFIG}", "r") as configFile:
+        api_key = configFile.readline().split()[1]
+        api_secret = configFile.readline().split()[1]
+        headers = {"Authorization": f"sso-key {api_key}:{api_secret}"}
+else:
+    print(f"""No config file found!, please make a config.ini file that has this format:
+           
+           config.ini:
+           key, [API-KEY]
+           secret, [API-SECRET]
+
+           To get your key and secret from godaddy.com, use this url: https://developer.godaddy.com/getstarted 
+           Make sure you make a key under the OTE environment hosted at: https://api.ote-godaddy.com""")
+    sys.exit()
 
 
 
@@ -54,10 +66,10 @@ for ext in EXTENSIONS:
 
 
 # open checked set
-try:
-    with open("{DATA_PATH}/{CHECKED}", "rb") as checkedFile:
+if os.path.isfile(f"{DATA_PATH}/{CHECKED}"):
+    with open(f"{DATA_PATH}/{CHECKED}", "rb") as checkedFile:
         checked = pickle.load(checkedFile)
-except:
+else:
     checked = set()
 print(f"Loaded {len(checked)} visited domains")
 
@@ -111,8 +123,8 @@ for i in range(MIN_DOMAIN_SIZE, MAX_DOMAIN_SIZE):
                     print(f"{count}. unknown code {page.status_code}: {domain}.{ext}")
                     successful=True
                 checked.add(domain)
-                with open(f"{DATA_PATH}/{CHECKED}") as checkedFile:
-                    pickle.dump(checkedFile, "wb")
+                with open(f"{DATA_PATH}/{CHECKED}", "wb") as checkedFile:
+                    pickle.dump(checked, checkedFile)
                 time.sleep(WAIT_TIME)
 
 
